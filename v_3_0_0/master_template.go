@@ -2325,8 +2325,8 @@ coreos:
     content: |
       [Unit]
       Description=Kubernetes Addons
-      Wants=k8s-api-server.service
-      After=k8s-api-server.service
+      Wants=k8s-kubelet.service
+      After=k8s-kubelet.service
       [Service]
       Type=oneshot
       EnvironmentFile=/etc/network-environment
