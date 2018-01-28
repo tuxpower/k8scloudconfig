@@ -1894,6 +1894,13 @@ write_files:
         resources:
           requests:
             cpu: 200m
+        livenessProbe:
+          httpGet:
+            host: 127.0.0.1
+            path: /healthz
+            port: 10251
+          initialDelaySeconds: 15
+          timeoutSeconds: 15
         volumeMounts:
         - mountPath: /etc/kubernetes/config/controller-manager-kubeconfig.yml
           subPath: controller-manager-kubeconfig.yml
@@ -1941,6 +1948,13 @@ write_files:
         resources:
           requests:
             cpu: 100m
+        livenessProbe:
+          httpGet:
+            host: 127.0.0.1
+            path: /healthz
+            port: 10251
+          initialDelaySeconds: 15
+          timeoutSeconds: 15
         volumeMounts:
         - mountPath: /etc/kubernetes/config/scheduler-kubeconfig.yml
           subPath: scheduler-kubeconfig.yml
