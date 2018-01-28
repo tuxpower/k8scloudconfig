@@ -1844,7 +1844,7 @@ write_files:
           readOnly: true
         - mountPath: /etc/kubernetes/secrets/token_sign_key.pem
           subPath: token_sign_key.pem
-          name: ssl-certs-kubernetes
+          name: k8s-secrets
           readOnly: true
         - mountPath: /etc/kubernetes/ssl/
           name: ssl-certs-kubernetes
@@ -1864,7 +1864,58 @@ write_files:
         name: ssl-certs-kubernetes
       - hostPath:
           path: /etc/kubernetes/secrets
-        name: k8s-secrets  
+        name: k8s-secrets
+
+- path: /etc/kubernetes/manifests/k8s-controller-manager.yml
+  owner: root
+  permissions: 0644
+  content: |
+    apiVersion: v1
+    kind: Pod
+    metadata:
+      name: k8s-controller-manager
+      namespace: kube-system
+    spec:
+      containers:
+      - name: k8s-controller-manager
+        image: quay.io/giantswarm/hyperkube:1.9.2
+        command:
+        - /hyperkube
+        - controller-manager
+        - --logtostderr=true
+        - --v=2
+        - --cloud-provider={{.Cluster.Kubernetes.CloudProvider}}
+        - --profiling=false
+        - --terminated-pod-gc-threshold=10
+        - --use-service-account-credentials=true
+        - --kubeconfig=/etc/kubernetes/config/controller-manager-kubeconfig.yml
+        - --root-ca-file=/etc/kubernetes/ssl/apiserver-ca.pem
+        - --service-account-private-key-file=/etc/kubernetes/ssl/service-account-key.pem
+        resources:
+          requests:
+            cpu: 200m
+        volumeMounts:
+        - mountPath: /etc/kubernetes/config/controller-manager-kubeconfig.yml
+          subPath: controller-manager-kubeconfig.yml
+          name: k8s-config
+          readOnly: true
+        - mountPath: /etc/kubernetes/secrets/token_sign_key.pem
+          subPath: token_sign_key.pem
+          name: k8s-secrets
+          readOnly: true
+        - mountPath: /etc/kubernetes/ssl/
+          name: ssl-certs-kubernetes
+          readOnly: true
+      volumes:
+      - hostPath:
+          path: /etc/kubernetes/config
+        name: k8s-config
+      - hostPath:
+          path: /etc/kubernetes/secrets
+        name: k8s-secrets
+      - hostPath:
+          path: /etc/kubernetes/ssl
+        name: ssl-certs-kubernetes
 
 - path: /etc/ssh/sshd_config
   owner: root
@@ -2214,48 +2265,6 @@ coreos:
   - name: systemd-networkd-wait-online.service
     enable: true
     command: start
-- name: k8s-controller-manager.service
-    enable: true
-    command: start
-    content: |
-      [Unit]
-      Description=k8s-controller-manager Service
-      StartLimitIntervalSec=0
-
-      [Service]
-      Restart=always
-      RestartSec=0
-      TimeoutStopSec=10
-      EnvironmentFile=/etc/network-environment
-      Environment="IMAGE=quay.io/giantswarm/hyperkube:v1.9.2"
-      Environment="NAME=%p.service"
-      Environment="NETWORK_CONFIG_CONTAINER="
-      ExecStartPre=/usr/bin/docker pull $IMAGE
-      ExecStartPre=-/usr/bin/docker stop -t 10 $NAME
-      ExecStartPre=-/usr/bin/docker rm -f $NAME
-      ExecStart=/usr/bin/docker run --rm --net=host --name $NAME \
-      {{ range .Hyperkube.ControllerManager.Docker.RunExtraArgs -}}
-      {{ . }} \
-      {{ end -}}
-      -v /etc/kubernetes/ssl/:/etc/kubernetes/ssl/ \
-      -v /etc/kubernetes/config/:/etc/kubernetes/config/ \
-      -v /etc/kubernetes/secrets/token_sign_key.pem:/etc/kubernetes/secrets/token_sign_key.pem \
-      $IMAGE \
-      /hyperkube controller-manager \
-      {{ range .Hyperkube.ControllerManager.Docker.CommandExtraArgs -}}
-      {{ . }}  \
-      {{ end -}}
-      --logtostderr=true \
-      --v=2 \
-      --cloud-provider={{.Cluster.Kubernetes.CloudProvider}} \
-      --profiling=false \
-      --terminated-pod-gc-threshold=10 \
-      --use-service-account-credentials=true \
-      --kubeconfig=/etc/kubernetes/config/controller-manager-kubeconfig.yml \
-      --root-ca-file=/etc/kubernetes/ssl/apiserver-ca.pem \
-      --service-account-private-key-file=/etc/kubernetes/ssl/service-account-key.pem
-      ExecStop=-/usr/bin/docker stop -t 10 $NAME
-      ExecStopPost=-/usr/bin/docker rm -f $NAME
   - name: k8s-scheduler.service
     enable: true
     command: start
