@@ -1917,6 +1917,46 @@ write_files:
           path: /etc/kubernetes/ssl
         name: ssl-certs-kubernetes
 
+- path: /etc/kubernetes/manifests/k8s-scheduler.yml
+  owner: root
+  permissions: 0644
+  content: |
+    apiVersion: v1
+    kind: Pod
+    metadata:
+      name: k8s-scheduler
+      namespace: kube-system
+    spec:
+      hostNetwork: true
+      containers:
+      - name: k8s-scheduler
+        image: quay.io/giantswarm/hyperkube:1.9.2
+        command:
+        - /hyperkube
+        - scheduler
+        - --logtostderr=true
+        - --v=2
+        - --profiling=false
+        - --kubeconfig=/etc/kubernetes/config/scheduler-kubeconfig.yml
+        resources:
+          requests:
+            cpu: 100m
+        volumeMounts:
+        - mountPath: /etc/kubernetes/config/scheduler-kubeconfig.yml
+          subPath: scheduler-kubeconfig.yml
+          name: k8s-config
+          readOnly: true
+        - mountPath: /etc/kubernetes/ssl/
+          name: ssl-certs-kubernetes
+          readOnly: true
+      volumes:
+      - hostPath:
+          path: /etc/kubernetes/config
+        name: k8s-config
+      - hostPath:
+          path: /etc/kubernetes/ssl
+        name: ssl-certs-kubernetes
+
 - path: /etc/ssh/sshd_config
   owner: root
   permissions: 0600
@@ -2265,36 +2305,6 @@ coreos:
   - name: systemd-networkd-wait-online.service
     enable: true
     command: start
-  - name: k8s-scheduler.service
-    enable: true
-    command: start
-    content: |
-      [Unit]
-      Description=k8s-scheduler Service
-      StartLimitIntervalSec=0
-
-      [Service]
-      Restart=always
-      RestartSec=0
-      TimeoutStopSec=10
-      EnvironmentFile=/etc/network-environment
-      Environment="IMAGE=quay.io/giantswarm/hyperkube:v1.9.2"
-      Environment="NAME=%p.service"
-      Environment="NETWORK_CONFIG_CONTAINER="
-      ExecStartPre=/usr/bin/docker pull $IMAGE
-      ExecStartPre=-/usr/bin/docker stop -t 10 $NAME
-      ExecStartPre=-/usr/bin/docker rm -f $NAME
-      ExecStart=/usr/bin/docker run --rm --net=host --name $NAME \
-      -v /etc/kubernetes/ssl/:/etc/kubernetes/ssl/ \
-      -v /etc/kubernetes/config/:/etc/kubernetes/config/ \
-      $IMAGE \
-      /hyperkube scheduler \
-      --logtostderr=true \
-      --v=2 \
-      --profiling=false \
-      --kubeconfig=/etc/kubernetes/config/scheduler-kubeconfig.yml
-      ExecStop=-/usr/bin/docker stop -t 10 $NAME
-      ExecStopPost=-/usr/bin/docker rm -f $NAME
   - name: k8s-addons.service
     enable: true
     command: start
