@@ -1781,7 +1781,7 @@ write_files:
       hostNetwork: true
       containers:
       - name: k8s-api-server
-        image: quay.io/giantswarm/hyperkube:1.9.2
+        image: quay.io/giantswarm/hyperkube:v1.9.2
         command:
         - /hyperkube
         - apiserver
@@ -1878,7 +1878,7 @@ write_files:
     spec:
       containers:
       - name: k8s-controller-manager
-        image: quay.io/giantswarm/hyperkube:1.9.2
+        image: quay.io/giantswarm/hyperkube:v1.9.2
         command:
         - /hyperkube
         - controller-manager
@@ -1937,7 +1937,7 @@ write_files:
       hostNetwork: true
       containers:
       - name: k8s-scheduler
-        image: quay.io/giantswarm/hyperkube:1.9.2
+        image: quay.io/giantswarm/hyperkube:v1.9.2
         command:
         - /hyperkube
         - scheduler
